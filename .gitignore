@@ -1,0 +1,67 @@
+# ===========================
+# Build output
+# ===========================
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ===========================
+# Maven wrapper JAR (not needed in source control —
+# the mvnw script downloads Maven automatically)
+# ===========================
+.mvn/wrapper/maven-wrapper.jar
+
+# ===========================
+# Local environment & secrets
+# Never commit passwords, tokens, or DB credentials!
+# ===========================
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-local.yml
+application-secret.properties
+application-secret.yml
+secrets.properties
+
+# ===========================
+# Spring Boot / IntelliJ IDEA
+# ===========================
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ===========================
+# Eclipse / Spring Tool Suite (STS)
+# ===========================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# ===========================
+# NetBeans
+# ===========================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ===========================
+# VS Code
+# ===========================
+.vscode/
+
+# ===========================
+# OS-generated files
+# ===========================
+.DS_Store
+Thumbs.db
