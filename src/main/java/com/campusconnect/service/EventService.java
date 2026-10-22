@@ -7,22 +7,29 @@ import com.campusconnect.entity.User;
 import com.campusconnect.exception.BadRequestException;
 import com.campusconnect.exception.ResourceNotFoundException;
 import com.campusconnect.repository.EventRepository;
+import com.campusconnect.repository.RegistrationRepository;
 import com.campusconnect.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class EventService {
 
-    private final EventRepository eventRepository;
-    private final UserRepository  userRepository;
+    private final EventRepository        eventRepository;
+    private final UserRepository         userRepository;
+    private final RegistrationRepository registrationRepository;
 
-    public EventService(EventRepository eventRepository, UserRepository userRepository) {
-        this.eventRepository = eventRepository;
-        this.userRepository  = userRepository;
+    public EventService(EventRepository eventRepository,
+                        UserRepository userRepository,
+                        RegistrationRepository registrationRepository) {
+        this.eventRepository        = eventRepository;
+        this.userRepository         = userRepository;
+        this.registrationRepository = registrationRepository;
     }
 
     // ── List / Search ─────────────────────────────────────────
@@ -32,9 +39,22 @@ public class EventService {
         // Pass null when the param is blank so the JPQL IS NULL condition matches
         String kw  = (keyword  == null || keyword.isBlank())  ? null : keyword.trim();
         String cat = (category == null || category.isBlank()) ? null : category.trim();
-        return eventRepository.search(kw, cat)
-                .stream()
-                .map(EventResponse::from)
+
+        List<Event> events = eventRepository.search(kw, cat);
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        // Fetch grouped confirmed registration counts in a single query
+        Map<Long, Integer> counts = new HashMap<>();
+        for (Object[] row : registrationRepository.countConfirmedRegistrationsGrouped()) {
+            Long eventId = (Long) row[0];
+            Long count   = (Long) row[1];
+            counts.put(eventId, count.intValue());
+        }
+
+        return events.stream()
+                .map(e -> EventResponse.from(e, counts.getOrDefault(e.getId(), 0)))
                 .toList();
     }
 
@@ -43,7 +63,8 @@ public class EventService {
     @Transactional(readOnly = true)
     public EventResponse getEvent(Long id) {
         Event event = findEventOrThrow(id);
-        return EventResponse.from(event);
+        int confirmed = (int) registrationRepository.countConfirmedByEventIdReadOnly(id);
+        return EventResponse.from(event, confirmed);
     }
 
     // ── Create ────────────────────────────────────────────────
@@ -88,7 +109,7 @@ public class EventService {
     // ── Helpers ───────────────────────────────────────────────
 
     private Event findEventOrThrow(Long id) {
-        return eventRepository.findById(id)
+        return eventRepository.findByIdWithOrganizer(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found with id: " + id));
     }
 

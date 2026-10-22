@@ -77,6 +77,29 @@ class RegistrationServiceTest {
         assertThat(response.getWaitlistPosition()).isNull();
     }
 
+    // ── Test: re-registration after cancellation ──────────────
+
+    @Test
+    void register_whenPreviouslyCancelled_reusesExistingRowAndConfirms() {
+        when(userRepository.findById(2L)).thenReturn(Optional.of(student));
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(registrationRepository.existsByStudentIdAndEventIdAndStatusNot(2L, 10L, Registration.Status.CANCELLED))
+                .thenReturn(false);
+        when(registrationRepository.countConfirmedByEventId(10L)).thenReturn(0L);
+
+        Registration cancelledReg = new Registration(student, event, Registration.Status.CANCELLED, null);
+        setId(cancelledReg, 105L);
+        when(registrationRepository.findByStudentIdAndEventIdAndStatus(2L, 10L, Registration.Status.CANCELLED))
+                .thenReturn(Optional.of(cancelledReg));
+        when(registrationRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        RegistrationResponse response = registrationService.register(request(2L, 10L));
+
+        assertThat(response.getId()).isEqualTo(105L);
+        assertThat(response.getStatus()).isEqualTo("CONFIRMED");
+        assertThat(response.getWaitlistPosition()).isNull();
+    }
+
     // ── Test: waitlist when event full ────────────────────────
 
     @Test

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class RegistrationService {
@@ -61,17 +62,35 @@ public class RegistrationService {
         // Count confirmed seats with a pessimistic write lock
         long confirmedCount = registrationRepository.countConfirmedByEventId(event.getId());
 
+        // Check if a cancelled registration row already exists for this (student, event)
+        // Reusing the existing row prevents a duplicate key error on the unique index.
+        Optional<Registration> existingCancelled = registrationRepository
+                .findByStudentIdAndEventIdAndStatus(student.getId(), event.getId(), Registration.Status.CANCELLED);
+
         Registration registration;
-        if (confirmedCount < event.getCapacity()) {
-            // Seat available
-            registration = new Registration(student, event, Registration.Status.CONFIRMED, null);
+        if (existingCancelled.isPresent()) {
+            registration = existingCancelled.get();
+            registration.setRegisteredAt(LocalDateTime.now());
+            if (confirmedCount < event.getCapacity()) {
+                registration.setStatus(Registration.Status.CONFIRMED);
+                registration.setWaitlistPosition(null);
+            } else {
+                long waitlistCount = registrationRepository.countWaitlistedByEventId(event.getId());
+                registration.setStatus(Registration.Status.WAITLISTED);
+                registration.setWaitlistPosition((int) (waitlistCount + 1));
+            }
         } else {
-            // Event full — add to waitlist
-            long waitlistCount = registrationRepository.countWaitlistedByEventId(event.getId());
-            registration = new Registration(
-                    student, event,
-                    Registration.Status.WAITLISTED,
-                    (int) (waitlistCount + 1));
+            if (confirmedCount < event.getCapacity()) {
+                // Seat available
+                registration = new Registration(student, event, Registration.Status.CONFIRMED, null);
+            } else {
+                // Event full — add to waitlist
+                long waitlistCount = registrationRepository.countWaitlistedByEventId(event.getId());
+                registration = new Registration(
+                        student, event,
+                        Registration.Status.WAITLISTED,
+                        (int) (waitlistCount + 1));
+            }
         }
 
         return RegistrationResponse.from(registrationRepository.save(registration));

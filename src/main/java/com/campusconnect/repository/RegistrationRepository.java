@@ -21,6 +21,14 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     @Query("SELECT COUNT(r) FROM Registration r WHERE r.event.id = :eventId AND r.status = 'CONFIRMED'")
     long countConfirmedByEventId(@Param("eventId") Long eventId);
 
+    /** Count confirmed registrations without lock (for read-only queries and display). */
+    @Query("SELECT COUNT(r) FROM Registration r WHERE r.event.id = :eventId AND r.status = 'CONFIRMED'")
+    long countConfirmedByEventIdReadOnly(@Param("eventId") Long eventId);
+
+    /** Grouped counts of confirmed registrations per event for bulk listing. */
+    @Query("SELECT r.event.id, COUNT(r) FROM Registration r WHERE r.status = 'CONFIRMED' GROUP BY r.event.id")
+    List<Object[]> countConfirmedRegistrationsGrouped();
+
     /** Get all registrations for an event, ordered for display. */
     @Query("""
             SELECT r FROM Registration r
@@ -54,5 +62,9 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     /** Find an existing non-cancelled registration for a student+event. */
     Optional<Registration> findByStudentIdAndEventIdAndStatusNot(
+            Long studentId, Long eventId, Registration.Status status);
+
+    /** Find an existing registration by status for a student+event (used for re-registration). */
+    Optional<Registration> findByStudentIdAndEventIdAndStatus(
             Long studentId, Long eventId, Registration.Status status);
 }

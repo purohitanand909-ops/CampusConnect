@@ -14,12 +14,18 @@ public class EventResponse {
     private LocalDateTime startTime;
     private LocalDateTime registrationDeadline;
     private int capacity;
+    private int registeredCount;
+    private int availableSpots;
     private String status;
     private Long organizerId;
     private String organizerName;
     private LocalDateTime createdAt;
 
     public static EventResponse from(Event e) {
+        return from(e, 0);
+    }
+
+    public static EventResponse from(Event e, int registeredCount) {
         EventResponse dto = new EventResponse();
         dto.id                   = e.getId();
         dto.title                = e.getTitle();
@@ -29,6 +35,8 @@ public class EventResponse {
         dto.startTime            = e.getStartTime();
         dto.registrationDeadline = e.getRegistrationDeadline();
         dto.capacity             = e.getCapacity();
+        dto.registeredCount      = registeredCount;
+        dto.availableSpots       = Math.max(0, e.getCapacity() - registeredCount);
         dto.status               = e.getStatus().name();
         dto.organizerId          = e.getOrganizer().getId();
         dto.organizerName        = e.getOrganizer().getName();
@@ -45,6 +53,8 @@ public class EventResponse {
     public LocalDateTime getStartTime() { return startTime; }
     public LocalDateTime getRegistrationDeadline() { return registrationDeadline; }
     public int getCapacity() { return capacity; }
+    public int getRegisteredCount() { return registeredCount; }
+    public int getAvailableSpots() { return availableSpots; }
     public String getStatus() { return status; }
     public Long getOrganizerId() { return organizerId; }
     public String getOrganizerName() { return organizerName; }
